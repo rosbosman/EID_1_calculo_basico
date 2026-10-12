@@ -7,7 +7,7 @@ ANCHO, ALTO = 900, 600
 FPS = 60
 
 
-class Nava :
+class Naves :
     def __init__(self):
         pass
 

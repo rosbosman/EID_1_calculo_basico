@@ -29,11 +29,11 @@ class balas:
         pass
 
 class Enemigos:
-    def __init__(self, x_base, y, es_jefe=False):
+    def __init__(self, x_base, y, tipo="normal"):
         self.x_base = x_base       
         self.x = x_base            
         self.y = y                 
-        self.es_jefe = es_jefe
+        self.tipo = tipo
         
         self.angulo = random.uniform(0, math.pi * 2)
         
@@ -42,15 +42,29 @@ class Enemigos:
         
         self.direccion_angulo = 1.0 if random.random() > 0.5 else -1.0
         
-        if self.es_jefe:
+        if self.tipo == "jefe":
             self.ancho, self.alto = 80, 80
             self.color = (255, 0, 0)
             self.vida_maxima = 10
             self.vida = 10
             self.amplitud_sin = 100     
             self.velocidad_angulo = 0.05 
+        elif self.tipo == "triangulo":
+            self.ancho, self.alto = 50, 50  
+            self.color = (255, 255, 0)
+            self.vida_maxima = 7
+            self.vida = 7
+            self.amplitud_sin = 85      
+            self.velocidad_angulo = 0.07 
+        elif self.tipo == "circulo":
+            self.ancho, self.alto = 50, 50  
+            self.color = (255, 128, 0)
+            self.vida_maxima = 6
+            self.vida = 6
+            self.amplitud_sin = 75      
+            self.velocidad_angulo = 0.065
         else:
-            self.ancho, self.alto = 40, 40
+            self.ancho, self.alto = 50, 50
             self.color = (0, 255, 0)
             self.vida_maxima = 5
             self.vida = 5
@@ -78,16 +92,48 @@ class Enemigos:
             self.direccion_y = 1   
 
     def dibujar(self, pantalla):
-        pygame.draw.rect(pantalla, self.color, (int(self.x), int(self.y), self.ancho, self.alto))
+        if self.tipo == "jefe":
+            centro_x = self.x + self.ancho / 2
+            centro_y = self.y + self.alto / 2
+            radio = self.ancho / 2
+            
+            puntos_hexagono = []
+            for i in range(6):
+                angulo_vertice = math.pi / 6 + i * (math.pi / 3)
+                px = int(centro_x + math.cos(angulo_vertice) * radio)
+                py = int(centro_y + math.sin(angulo_vertice) * radio)
+                puntos_hexagono.append((px, py))
+                
+            pygame.draw.polygon(pantalla, self.color, puntos_hexagono)
+            
+        elif self.tipo == "triangulo":
+            punto_top_left = (int(self.x), int(self.y))
+            punto_top_right = (int(self.x + self.ancho), int(self.y))
+            punto_bottom = (int(self.x + self.ancho / 2), int(self.y + self.alto))
+            pygame.draw.polygon(pantalla, self.color, [punto_top_left, punto_top_right, punto_bottom])
+            
+        elif self.tipo == "circulo":
+            radio = self.ancho // 2
+            centro_x = int(self.x + radio)
+            centro_y = int(self.y + radio)
+            pygame.draw.circle(pantalla, self.color, (centro_x, centro_y), radio)
+            
+        else:
+            pygame.draw.rect(pantalla, self.color, (int(self.x), int(self.y), self.ancho, self.alto))
+            
+        largo_barra = self.ancho
+        vida_proporcional = (self.vida / self.vida_maxima) * largo_barra
         
-        if self.es_jefe:
-            largo_barra = self.ancho
-            vida_proporcional = (self.vida / self.vida_maxima) * largo_barra
+        if self.tipo == "jefe":
             pygame.draw.rect(pantalla, (100, 0, 0), (int(self.x), int(self.y) - 12, largo_barra, 6))
             pygame.draw.rect(pantalla, (255, 0, 0), (int(self.x), int(self.y) - 12, int(vida_proporcional), 6))
+        elif self.tipo == "triangulo":
+            pygame.draw.rect(pantalla, (80, 80, 20), (int(self.x), int(self.y) - 10, largo_barra, 5))
+            pygame.draw.rect(pantalla, (255, 255, 100), (int(self.x), int(self.y) - 10, int(vida_proporcional), 5))
+        elif self.tipo == "circulo":
+            pygame.draw.rect(pantalla, (80, 40, 0), (int(self.x), int(self.y) - 10, largo_barra, 5))
+            pygame.draw.rect(pantalla, (255, 180, 50), (int(self.x), int(self.y) - 10, int(vida_proporcional), 5))
         else:
-            largo_barra = self.ancho
-            vida_proporcional = (self.vida / self.vida_maxima) * largo_barra
             pygame.draw.rect(pantalla, (80, 20, 20), (int(self.x), int(self.y) - 8, largo_barra, 4))
             pygame.draw.rect(pantalla, (0, 255, 100), (int(self.x), int(self.y) - 8, int(vida_proporcional), 4))
 
@@ -130,17 +176,17 @@ def crear_oleada(numero):
     lista_enemigos = []
     
     if numero == 1:
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50, tipo="normal"))
     elif numero == 2:
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -180)) 
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50, tipo="normal"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -180, tipo="triangulo")) 
     elif numero == 3:
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -180))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -310)) 
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50, tipo="normal"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -180, tipo="triangulo"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -310, tipo="circulo")) 
     elif numero >= 4:
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -100, es_jefe=True))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -280))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -100, tipo="jefe"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -280, tipo="normal")) 
         
     return lista_enemigos
 
@@ -155,7 +201,7 @@ def dibujar_interfaz(pantalla, oleada):
 def main():
     pygame.init()
     pantalla = pygame.display.set_mode((ANCHO, ALTO))
-    pygame.display.set_caption("SI LAS COLISIONES SE BUGUEAN DENUEVO ME MATO")
+    pygame.display.set_caption("hexagono la figura perfecta")
     reloj = pygame.time.Clock()
     
     numero_oleada = 1
@@ -167,7 +213,6 @@ def main():
             if evento.type == pygame.QUIT:
                 corriendo = False
                 
-                #ESTO SE ELEMINA ERA PA PROBAR LAS OLEADAS
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE and len(lista_enemigos) > 0:
                     lista_enemigos[0].vida -= 1 

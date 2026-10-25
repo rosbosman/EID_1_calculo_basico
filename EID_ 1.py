@@ -21,16 +21,16 @@ class Naves:
         self.ultimo_golpe = -INVULNERABLE_MS # parte en  -INVULNERABLE_MS para que el  el prigolpe si cuente 
   
     def mover(self, teclas):
-        if teclas[PYG.K_LEFT]:
+        if teclas[pygame.K_LEFT]:
             self.x -= self.velocidad
-        if teclas[PYG.K_RIGHT]:
+        if teclas[pygame.K_RIGHT]:
             self.x += self.velocidad
 
 
             # en pygame el eje crece hacia abajo , por eso arriba resta y abajp suma
-        if teclas[PYG.K_UP]:
+        if teclas[pygame.K_UP]:
             self.y -= self.velocidad
-        if teclas[PYG.K_DOWN]:
+        if teclas[pygame.K_DOWN]:
             self.y += self.velocidad
 
             # es el limite del mapa min evita pasarse del borde derecho inferior y max evita pasarse del izquuierdo superior
@@ -46,7 +46,7 @@ class Naves:
         self.ultimo_golpe = ahora # se registra  el momento del golpe para activa la invunerabilidad 
  
     def dibujar(self, pantalla):
-        ahora = PYG.time.get_ticks()
+        ahora = pygame.time.get_ticks()
         if ahora - self.ultimo_golpe < INVULNERABLE_MS and (ahora // 100) % 2 == 0:
             return
          # la nave es un poligno de 4 puntos calculado a partir del centro  y el radio  apunta hacia arriba, ala izquierda muesca central y ala derecha
@@ -57,10 +57,10 @@ class Naves:
             (self.x, self.y + r // 2),
             (self.x + r, self.y + r),
         ]
-        PYG.draw.polygon(pantalla, (80, 200, 255), puntos)
+        pygame.draw.polygon(pantalla, (80, 200, 255), puntos)
 
         def hay_colision(a, b):
-            distancia = MA.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+            distancia = math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
             return distancia <= a.radio + b.radio
 
 LIMITE_IZQUIERDO = 500
@@ -106,7 +106,8 @@ class Enemigos:
             self.vida_maxima = 7
             self.vida = 7
             self.amplitud_sin = 85      
-            self.velocidad_angulo = 0.07 
+            self.velocidad_angulo = 0.035
+            self.velocidad_y = 1.0 
         elif self.tipo == "circulo":
             self.ancho, self.alto = 50, 50  
             self.color = (255, 128, 0)
@@ -123,10 +124,26 @@ class Enemigos:
             self.velocidad_angulo = 0.06 
             
     def actualizar(self):
-        self.y += self.velocidad_y * self.direccion_y
-        
         self.angulo += self.velocidad_angulo * self.direccion_angulo
-        self.x = self.x_base + math.sin(self.angulo) * self.amplitud_sin
+
+        if self.tipo == "jefe":
+            self.x = self.x_base + math.sin(self.angulo) * self.amplitud_sin
+            self.y += (self.velocidad_y * self.direccion_y) + (math.sin(2 * self.angulo) * 1.5)
+            
+        elif self.tipo == "triangulo":
+            onda_triangular = 2.0 * abs((self.angulo / math.pi) - math.floor((self.angulo / math.pi) + 0.5))
+            sierra_continua = onda_triangular * 2.0 - 1.0
+            
+            self.x = self.x_base + sierra_continua * self.amplitud_sin
+            self.y += self.velocidad_y * self.direccion_y
+            
+        elif self.tipo == "circulo":
+            self.x = self.x_base + math.cos(self.angulo) * self.amplitud_sin
+            self.y += self.velocidad_y * self.direccion_y + math.sin(self.angulo) * 3
+            
+        else:
+            self.x = self.x_base + math.sin(self.angulo) * self.amplitud_sin
+            self.y += self.velocidad_y * self.direccion_y
         
         if self.x < LIMITE_IZQUIERDO:
             self.x = LIMITE_IZQUIERDO
@@ -222,26 +239,27 @@ def gestionar_colisiones_enemigos(lista_enemigos):
                     else:
                         e1.y += traslape_y / 2
                         e2.y -= traslape_y / 2
-
+                        
 def crear_oleada(numero):
     lista_enemigos = []
     
     if numero == 1:
         lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50, tipo="normal"))
     elif numero == 2:
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50, tipo="normal"))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -180, tipo="triangulo")) 
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO - 80, -50, tipo="normal"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO + 80, -120, tipo="triangulo")) 
     elif numero == 3:
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -50, tipo="normal"))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -180, tipo="triangulo"))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -310, tipo="circulo")) 
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO - 120, -50, tipo="normal"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -150, tipo="triangulo"))
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO + 120, -250, tipo="circulo")) 
     elif numero >= 4:
         lista_enemigos.append(Enemigos(CARRIL_CENTRO, -100, tipo="jefe"))
-        lista_enemigos.append(Enemigos(CARRIL_CENTRO, -280, tipo="normal")) 
+        lista_enemigos.append(Enemigos(CARRIL_CENTRO - 150, -250, tipo="normal")) 
         
     return lista_enemigos
 
 def dibujar_interfaz(pantalla, oleada):
+    
     fuente = pygame.font.SysFont("monospace", 24)
     texto_oleada = f"OLEADA: {oleada}"
     if oleada >= 4:
@@ -250,9 +268,10 @@ def dibujar_interfaz(pantalla, oleada):
     pantalla.blit(render_texto, (20, 20))
 
 def main():
+    
     pygame.init()
     pantalla = pygame.display.set_mode((ANCHO, ALTO))
-    pygame.display.set_caption("hexagono la figura perfecta")
+    pygame.display.set_caption("colisones colisiones colisiones")
     reloj = pygame.time.Clock()
     
     numero_oleada = 1
@@ -263,33 +282,35 @@ def main():
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 corriendo = False
-                
+            
+            #con el espacio se le quita vida al primer enemigo de la lista para probar la colision y el daño
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_SPACE and len(lista_enemigos) > 0:
-                    lista_enemigos[0].vida -= 1 
+                    lista_enemigos[0].vida -= 1
                     if lista_enemigos[0].vida <= 0:
                         lista_enemigos.pop(0)
-                        
+
         for enemigo in lista_enemigos:
             enemigo.actualizar()
-            
+
         gestionar_colisiones_enemigos(lista_enemigos)
-            
+
         if len(lista_enemigos) == 0:
             numero_oleada += 1
             lista_enemigos = crear_oleada(numero_oleada)
-            
+
         pantalla.fill((10, 10, 20))
-        
+
         for enemigo in lista_enemigos:
             enemigo.dibujar(pantalla)
-            
+
         dibujar_interfaz(pantalla, numero_oleada)
-        
+
         pygame.display.flip()
         reloj.tick(FPS)
-        
+
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()
